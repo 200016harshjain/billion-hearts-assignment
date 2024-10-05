@@ -26,6 +26,7 @@
 - Upload Image Metadata
     - Endpoint: POST /images/
     - Description: Upload metadata for a new image
+    - Authentication: Required
     - Request Body: ImageUploadRequest
         - original_filename: string
         - user_id: integer
@@ -35,63 +36,80 @@
         - file_type: string
     - Response: Image object
     - Status Codes:
-        - 200: Success
-        - 404: User not found
-        - 422: Validation error
+        - 200: Successful response (Image object)
+        - 403: Not authorized to upload for this user
+        - 404: User does not exist
 - List Images for User
     - Endpoint: GET /users/{user_id}/images
     - Description: Retrieve all images for a specific user
+    - Authentication: Required
     - Path Parameters: user_id (integer)
     - Response: List of Image objects
     - Status Codes:
        - 200: Success
-       - 404: User not found or no images found
+       - 403: Unauthorized access to user images
+       - 404: User not found or No images found for this user
 - Get Image Details
     - Endpoint: GET /images/{image_id}
     - Description: Retrieve details of a specific image
+    - Authentication: Required
     - Path Parameters: image_id (integer)
     - Response: Image object
     - Status Codes:
-       - 200: Success
+       - 200: Successful response (Image object)
+       - 403: Unauthorized access to user image
        - 404: Image not found
 - Download Image
     - Endpoint: GET /images/{image_id}/download
     - Description: Download a specific image (currently returns metadata)
+    - Authentication: Required
     - Path Parameters: image_id (integer)
     - Response: Image object
     - Status Codes:
-       - 200: Success
+       - 200: Successful response (Image object)
+       - 403: Unauthorized access to user image
        - 404: Image not found
 - Update Image Metadata
    - Endpoint: PUT /images/{image_id}
    - Description: Update metadata for a specific image
+   - Authentication: Required
    - Path Parameters: image_id (integer)
    - Request Body: ImageUpdateRequest
        - Fields to update (e.g., original_filename, width, height)
    - Response: Updated Image object
     - Status Codes:
-       - 200: Success
+       - 200: Successful response (Updated Image object)
+       - 403: Unauthorized access to user image
        - 404: Image not found
-       - 422: Validation error
 - Delete Image
     - Endpoint: DELETE /images/{image_id}
     - Description: Delete a specific image
+    - Authentication: Required
     - Path Parameters: image_id (integer)
     - Response: Confirmation message
     - Status Codes:
-       - 200: Success
+       - 200: Image deleted successfully
+       - 403: Unauthorized access to user image
        - 404: Image not found
 - Create User
     - Endpoint: POST /users/
     - Description: Create a new user
+    - Authentication: Not required
     - Request Body: UserCreateRequest
        - id: integer
        - username: string
+       - password: string
     - Response: User object
     - Status Codes:
-       - 200: Success
-       - 422: Validation error
-         
+       - 201: UserResponse (Created User Object)
+       - 400: Username already registered
+- Token
+  - Description: Login to obtain access token
+  - Authentication: Not required
+  - Request Body: OAuth2PasswordRequestForm
+  - Responses:
+    - 200: Successful response (Token object)
+    - 401: Incorrect username or password
 ## Python Data Model
 ```
    class User(Base):
@@ -131,8 +149,17 @@ The submission is done on FASTApi and uses an SQLite DB for the database. To set
 
 
 ## Testing Help
-- I have created a user with 'user id' 1. Whenever you create a new image you can use the '1' as a user id or create a new user id with the 'create user' endpoint present in swagger
-- You can use a random user id like 9999 or image-id 9999 to test out negative scenarios (invalid user, invalid image) for few of the relevant APIs
+- Since we've implemented JWT - you can authenticate using id and password to test the endpoints
+- Sample Users
+   - First User
+      - username : "harsh"
+      - password : "test"
+      - id: 1
+  - Second User
+      - username : "nupur"
+      - password : "testing"
+      - id: 2
+- You can also create a new user using the ```/users/``` endpoint.
 - Run test suite ```pytest tests/test_main.py```
 
 ## Bonus 
@@ -146,6 +173,7 @@ The submission is done on FASTApi and uses an SQLite DB for the database. To set
             - Effectively have one service for upload and analysis to save on message broker latency and prevent an extra read from S3 and the overall dev effort in maintaining another service.
             - If the SLA for both is 100ms one can imagine that users would upload an image and only on succesful analysis would we move to the next step.  The idea is that image upload and analysis are tightly coupled
               in our user workflow and hence we can make that tradeoff of having tight coupling in code to meet our SLAs and have lesser overhead in maintaining an extra service.
+- Implemented JWT in a manner that User having id X can only access images having the same id X
     
      
   
