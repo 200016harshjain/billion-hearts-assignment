@@ -20,4 +20,18 @@ Components and their brief explanation
     -  Using message broker to communicate between services as REST calls from service A to B would introduce tight coupling between the two services.
 - Image Analysis - It is a separate service that would contain the image analysis logic - currently we have not set up any actions on success/failure of image analysis as that would depend on the use case we are solving for
 
+Setup Information
 
+The submission is done on FASTApi and uses an SQLite DB for the database. To set this up on your local-
+1) Clone the repository on your local
+2) Run this command to download the requirements
+ ```pip install -r requirements.txt ```
+3) Run this command to bring up the application
+ ```uvicorn app.main:app --reload --port 8080```
+4) The application comes up on port 8080. You can view the swagger to test the APIs using this url - ```http://127.0.0.1:8080/docs```
+
+
+Testing Help
+- I have created a user with 'user id' 1. Whenever you create a new image you can use the '1' as a user id or create a new user id with the 'create user' endpoint present in swagger
+- You can use a random user id like 9999 or image-id 9999 to test out negative scenarios (invalid user, invalid image) for few of the relevant APIs
+  
