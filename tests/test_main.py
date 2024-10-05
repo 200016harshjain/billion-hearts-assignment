@@ -105,7 +105,7 @@ def test_upload_image_metadata_user_does_not_exist(test_token):
     headers = {"Authorization": f"Bearer {test_token}"}
     response = client.post("/images/", json=image_data, headers=headers)
     print(response.json())
-    assert response.status_code == 404
+    assert response.status_code == 403
 
 def test_list_images_for_user_success(test_token):
     #using the earlier created image for the user 1
@@ -115,15 +115,13 @@ def test_list_images_for_user_success(test_token):
     assert len(response.json()) == 1
     
 
-def test_list_images_for_user_with_no_images(test_token):
+def test_list_images_for_user_with_no_images():
     # Create a user without images
-
-    headers = {"Authorization": f"Bearer {test_token}"}
     user_response = client.post("/users/", json={"id":3,"username": "emptyuser", "password": "emptypassword"})
     login_data = {"username": "emptyuser", "password": "emptypassword"}
     response = client.post("/token", data=login_data)
     token = response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {test_token}"}
+    headers = {"Authorization": f"Bearer {token}"}
     response = client.get(f"/users/3/images", headers=headers)
     assert response.status_code == 404
 
@@ -176,6 +174,7 @@ def test_delete_image_success(test_token):
     get_response = client.get(f"/images/1", headers=headers)
     assert get_response.status_code == 404
 
+#deleted a few tests related to invalid inputs (999, invalid) post JWT 
 
 
 

@@ -17,6 +17,8 @@ app = FastAPI()
 
 @app.post("/images/")
 def upload_image_metadata(image_data: ImageUploadRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if image_data.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload for this user") 
     user = db.query(User).filter(User.id == image_data.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User does not exist")
@@ -29,6 +31,8 @@ def upload_image_metadata(image_data: ImageUploadRequest, db: Session = Depends(
 
 @app.get("/users/{user_id}/images")
 def list_images_for_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to user images")  
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -41,9 +45,11 @@ def list_images_for_user(user_id: int, db: Session = Depends(get_db), current_us
 
 @app.get("/images/{image_id}")
 def get_image_details(image_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    image = db.query(Image).filter(Image.id == image_id).first()
+    image = db.query(Image).filter(Image.id == image_id).first() 
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
+    if current_user.id != image.user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to user image") 
     return image
 
 @app.get("/images/{image_id}/download")
@@ -52,15 +58,18 @@ def download_image(image_id: int, db: Session = Depends(get_db), current_user: U
     #Downloading the image would actually be done from the 'storage_path' - returning metadata for now
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
+    if current_user.id != image.user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to user image")  
     return image
 
 @app.put("/images/{image_id}")
 def update_image_metadata(image_id: int, image_update: ImageUpdateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     #updating image data may include  updating the image in the S3 Store based on requirements
-    image = db.query(Image).filter(Image.id == image_id).first()
+    image = db.query(Image).filter(Image.id == image_id).first() 
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
-
+    if current_user.id != image.user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to user image") 
     for key, value in image_update.dict(exclude_unset=True).items():
         setattr(image, key, value)
 
@@ -70,9 +79,11 @@ def update_image_metadata(image_id: int, image_update: ImageUpdateRequest, db: S
 
 @app.delete("/images/{image_id}")
 def delete_image(image_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    image = db.query(Image).filter(Image.id == image_id).first()
+    image = db.query(Image).filter(Image.id == image_id).first() 
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
+    if current_user.id != image.user_id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to user image") 
     # deletion would also include deleting the image from the S3 Store
     db.delete(image)
     db.commit()
@@ -103,4 +114,4 @@ def create_user(user: UserCreateRequest, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return "User"
+    return "User Created Succesfully"
