@@ -3,23 +3,24 @@
 
 ## High Level Design
 
-<img width="691" alt="image" src="https://github.com/user-attachments/assets/191b8c28-b67e-4894-ba9b-6e2a8a9a77c5">
+<img width="880" alt="image" src="https://github.com/user-attachments/assets/ea8e997f-b125-4a25-af0e-b78ea6f76e13">
+
 
 ## Components and their brief explanation
 
-- Client - It is the user interacting with the "Image Upload" service via the load balancer.
--  Load Balancer - It is used to distribute traffic between instances of the "Image Upload" service.
-- Image Upload - It is the service that has all the core CRUD APIs related to image upload and management. 
+- Client - It is the user interacting our services via the load balancer
+- Load Balancer - It is used to distribute traffic between instances of the "Image Upload and Retrieval" service.
+- Image Upload and Retrieval - It is the service that has all the core CRUD APIs related to image upload and management. Assuming that P99 100ms is just on 'Image Upload' and 'Image Analysis' is a longer workload
+- CDN - We introduce a CDN to speed up our reads from Image Upload and Retrieval Service. Since we expect this to be read heavy service (10:1) - the faster reads via CDN would really help meet our SLAs
 - Metadata DB - It is the database table that stores the metadata associated with each image.
 - Object Store (S3) - For image upload - we just store the image metadata in the the table mentioned in (d). However the actual image is stored on an object store like S3. We can access the image from S3 via it's storage url 
 - Message Broker (Rabbit MQ)
-    - We use a light weight message broker to communicate between Image Upload and Image Analysis services.
+    - We use a light weight message broker to communicate between Image Upload/Retrieval and Image Analysis services.
     - We have split this as Image Analysis can be a process that is time consuming and can happen in the background while Image Upload is something that needs to happen really fast.
     - The assumption made is on any "Create/Update" on an image we would be passing a notification to our Image Analysis service to trigger an analysis.
-    -  The kind of data we would look to pass via the message broker would be {storageURL, imageId, userId} - the storageURL would be used to fetch the image from S3; imageId and userId can be used to update the analysis output to the specific image and user based on requirements
+    - The kind of data we would look to pass via the message broker would be {storageURL, imageId, userId} - the storageURL would be used to fetch the image from S3; imageId and userId can be used to map the analysis output to the specific image and user based on requirements
     -  Using message broker to communicate between services as REST calls from service A to B would introduce tight coupling between the two services.
-- Image Analysis - It is a separate service that would contain the image analysis logic - currently we have not set up any actions on success/failure of image analysis as that would depend on the use case we are solving for
-
+- Image Analysis - It is a separate service that would contain the image analysis process. (assuming image analysis is a longer workload)
 ## API Documentation
 
 - Upload Image Metadata
@@ -132,4 +133,18 @@ The submission is done on FASTApi and uses an SQLite DB for the database. To set
 ## Testing Help
 - I have created a user with 'user id' 1. Whenever you create a new image you can use the '1' as a user id or create a new user id with the 'create user' endpoint present in swagger
 - You can use a random user id like 9999 or image-id 9999 to test out negative scenarios (invalid user, invalid image) for few of the relevant APIs
+
+## Bonus 
+- Notifying users post image analysis
+  - I have assumed that the image analysis process is not real time - it is a longer running workload.
+  - With that assumption
+        - A notification service that is responsible to send notifications to client.
+        - The image analysis service would then communicate to this notification service over a light weight message broker.
+  - If that assumption is not true
+        - Image upload and analysis is to have an SLA of 100 ms then I would rework the design
+            - Effectively have one service for upload and analysis to save on message broker latency and prevent an extra read from S3 and the overall dev effort in maintaining another service.
+            - If the SLA for both is 100ms one can imagine that users would upload an image and only on succesful analysis would we move to the next step.  The idea is that image upload and analysis are tightly coupled
+              in our user workflow and hence we can make that tradeoff of having tight coupling in code to meet our SLAs and have lesser overhead in maintaining an extra service.
+    
+     
   
