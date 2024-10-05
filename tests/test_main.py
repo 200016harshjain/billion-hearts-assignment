@@ -33,7 +33,7 @@ def setup_database():
     Base.metadata.drop_all(bind=engine)
 
 def create_test_user_and_token():
-    user_data = {"id": 1, "username": "testuser", "password": "testpassword"}
+    user_data = { "username": "testuser", "password": "testpassword"}
     response = client.post("/users/", json=user_data)
     assert response.status_code == 200
 
@@ -117,12 +117,12 @@ def test_list_images_for_user_success(test_token):
 
 def test_list_images_for_user_with_no_images():
     # Create a user without images
-    user_response = client.post("/users/", json={"id":3,"username": "emptyuser", "password": "emptypassword"})
+    user_response = client.post("/users/", json={"username": "emptyuser", "password": "emptypassword"})
     login_data = {"username": "emptyuser", "password": "emptypassword"}
     response = client.post("/token", data=login_data)
     token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.get(f"/users/3/images", headers=headers)
+    response = client.get(f"/users/2/images", headers=headers)
     assert response.status_code == 404
 
 def test_get_image_details_success(test_token):

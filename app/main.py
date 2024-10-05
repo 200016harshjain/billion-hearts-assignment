@@ -109,9 +109,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 # Modify the create_user endpoint to hash the password
 @app.post("/users/")
 def create_user(user: UserCreateRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == user.username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
     hashed_password = get_password_hash(user.password)
-    db_user = User(username=user.username, id=user.id, hashed_password=hashed_password)
+    db_user = User(username=user.username, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return "User Created Succesfully"
+    return db_user

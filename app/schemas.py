@@ -32,7 +32,6 @@ class TokenData(BaseModel):
 class UserCreateRequest(BaseModel):
     username: str
     password: str
-    id: int
 
     class Config:
         extra = "forbid"
