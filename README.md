@@ -8,19 +8,19 @@
 
 ## Components and their brief explanation
 
-- Client - It is the user interacting our services via the load balancer
+- Client - It is the user interacting with our services via the load balancer
 - Load Balancer - It is used to distribute traffic between instances of the "Image Upload and Retrieval" service.
-- Image Upload and Retrieval - It is the service that has all the core CRUD APIs related to image upload and management. Assuming that P99 100ms is just on 'Image Upload' and 'Image Analysis' is a longer workload
+- Image Upload and Retrieval - It is the service that has all the core CRUD APIs related to image upload and management. Assuming that P99 100ms is just on 'Image Upload and Retrieval' and 'Image Analysis' is a longer workload with different SLAs 
 - CDN - We introduce a CDN to speed up our reads from Image Upload and Retrieval Service. Since we expect this to be read heavy service (10:1) - the faster reads via CDN would really help meet our SLAs
 - Metadata DB - It is the database table that stores the metadata associated with each image.
 - Object Store (S3) - For image upload - we just store the image metadata in the the table mentioned in (d). However the actual image is stored on an object store like S3. We can access the image from S3 via it's storage url 
 - Message Broker (Rabbit MQ)
     - We use a light weight message broker to communicate between Image Upload/Retrieval and Image Analysis services.
-    - We have split this as Image Analysis can be a process that is time consuming and can happen in the background while Image Upload is something that needs to happen really fast.
-    - The assumption made is on any "Create/Update" on an image we would be passing a notification to our Image Analysis service to trigger an analysis.
+    - We have split this as Image Analysis is assumed to be a longer workload that can happen in the background while Image Upload is something that needs to happen really fast.
+    - Another assumption made is on any "Create/Update" on an image we would be passing a notification to our Image Analysis service to trigger an analysis.
     - The kind of data we would look to pass via the message broker would be {storageURL, imageId, userId} - the storageURL would be used to fetch the image from S3; imageId and userId can be used to map the analysis output to the specific image and user based on requirements
-    -  Using message broker to communicate between services as REST calls from service A to B would introduce tight coupling between the two services.
-- Image Analysis - It is a separate service that would contain the image analysis process. (assuming image analysis is a longer workload)
+    - Use a message broker to communicate between services as REST calls from service A to B would introduce tight coupling between the two services.
+- Image Analysis - It is a separate service that would contain the image analysis logic. 
 ## API Documentation
 
 - Upload Image Metadata
@@ -114,7 +114,7 @@
 ```
    class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, index=True, autoincrement=False) 
+    id = Column(Integer, primary_key=True, index=True) 
     username = Column(String, unique=True, index=True)
     images = relationship("Image", back_populates="user")
 ```
