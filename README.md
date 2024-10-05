@@ -133,6 +133,7 @@ The submission is done on FASTApi and uses an SQLite DB for the database. To set
 ## Testing Help
 - I have created a user with 'user id' 1. Whenever you create a new image you can use the '1' as a user id or create a new user id with the 'create user' endpoint present in swagger
 - You can use a random user id like 9999 or image-id 9999 to test out negative scenarios (invalid user, invalid image) for few of the relevant APIs
+- Run test suite ```pytest tests/test_main.py```
 
 ## Bonus 
 - Notifying users post image analysis
