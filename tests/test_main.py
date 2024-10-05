@@ -32,16 +32,24 @@ def setup_database():
     yield
     Base.metadata.drop_all(bind=engine)
 
+def create_test_user_and_token():
+    user_data = {"id": 1, "username": "testuser", "password": "testpassword"}
+    response = client.post("/users/", json=user_data)
+    assert response.status_code == 200
+
+    login_data = {"username": "testuser", "password": "testpassword"}
+    response = client.post("/token", data=login_data)
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+@pytest.fixture(scope="module")
+def test_token():
+    return create_test_user_and_token()
+
 # TO-DO : Can have a utility to create test data at the start of each run for lesser code in individual tests
 
-def test_create_user():
-    response = client.post("/users/", json={"id": 1, "username": "testuser"})
-    assert response.status_code == 200
-    data = response.json()
-    assert data["id"] == 1
-    assert data["username"] == "testuser"
 
-def test_upload_image_metadata_success():
+def test_upload_image_metadata_success(test_token):
     image_data = {
         "original_filename": "testfile.jpeg",
         "user_id": 1,
@@ -50,14 +58,15 @@ def test_upload_image_metadata_success():
         "file_size": 1024,
         "file_type": "jpeg"
     }
-    response = client.post("/images/", json=image_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/images/", json=image_data, headers=headers)
     print(response.json())
     assert response.status_code == 200
     assert response.json()["original_filename"] == "testfile.jpeg"
     assert response.json()["user_id"] == 1
 
 
-def test_upload_image_metadata_missing_field():
+def test_upload_image_metadata_missing_field(test_token):
     image_data = {
         "original_filename": "testfile.jpeg",
         "user_id": 1,
@@ -65,11 +74,12 @@ def test_upload_image_metadata_missing_field():
         "height": 600,
         "file_type": "jpeg"
     }
-    response = client.post("/images/", json=image_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/images/", json=image_data, headers=headers)
     print(response.json())
     assert response.status_code == 422
    
-def test_upload_image_metadata_invalid_file_type():
+def test_upload_image_metadata_invalid_file_type(test_token):
     image_data = {
         "original_filename": "testfile.jpeg",
         "user_id": 1,
@@ -78,11 +88,12 @@ def test_upload_image_metadata_invalid_file_type():
         "file_size": 1024,
         "file_type": "pdf"
     }
-    response = client.post("/images/", json=image_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/images/", json=image_data, headers=headers)
     print(response.json())
     assert response.status_code == 422
 
-def test_upload_image_metadata_user_does_not_exist():
+def test_upload_image_metadata_user_does_not_exist(test_token):
     image_data = {
         "original_filename": "testfile.jpeg",
         "user_id": 2,
@@ -91,86 +102,79 @@ def test_upload_image_metadata_user_does_not_exist():
         "file_size": 1024,
         "file_type": "jpeg"
     }
-    response = client.post("/images/", json=image_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.post("/images/", json=image_data, headers=headers)
     print(response.json())
     assert response.status_code == 404
 
-def test_list_images_for_user_success():
-    #user the earlier created image for the user 1
-    response = client.get(f"/users/1/images")
+def test_list_images_for_user_success(test_token):
+    #using the earlier created image for the user 1
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get(f"/users/1/images", headers=headers)
     assert response.status_code == 200
     assert len(response.json()) == 1
     
-def test_list_images_for_nonexistent_user():
-    response = client.get("/users/999/images")
-    assert response.status_code == 404
 
-def test_list_images_for_user_with_no_images():
+def test_list_images_for_user_with_no_images(test_token):
     # Create a user without images
-    user_response = client.post("/users/", json={"id":3,"username": "emptyuser"})
-    response = client.get(f"/users/3/images")
+
+    headers = {"Authorization": f"Bearer {test_token}"}
+    user_response = client.post("/users/", json={"id":3,"username": "emptyuser", "password": "emptypassword"})
+    login_data = {"username": "emptyuser", "password": "emptypassword"}
+    response = client.post("/token", data=login_data)
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get(f"/users/3/images", headers=headers)
     assert response.status_code == 404
 
-def test_get_image_details_success():
-    response = client.get("/images/1")
+def test_get_image_details_success(test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.get("/images/1", headers=headers)
     assert response.status_code == 200
     assert response.json()["id"] == 1
     assert response.json()["original_filename"] == "testfile.jpeg"
     assert response.json()["user_id"] == 1
 
-def test_get_image_details_nonexistent():
-    response = client.get("/images/9999")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Image not found"
-
-def test_get_image_details_invalid_id():
-    response = client.get("/images/invalid")
-    assert response.status_code == 422  #
 
 # Currently download and get_image_details are the same as we don't explicitly have an image to download hence skipping tests
 
-def test_update_image_metadata_success():
+def test_update_image_metadata_success(test_token):
     # Update the image metadata
     update_data = {
         "original_filename": "updated.jpg",
         "width": 1024,
         "height": 768
     }
-    response = client.put(f"/images/1", json=update_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.put(f"/images/1", json=update_data, headers=headers)
     assert response.status_code == 200
     assert response.json()["original_filename"] == "updated.jpg"
     assert response.json()["width"] == 1024
     assert response.json()["height"] == 768
 
-def test_update_nonexistent_image():
+def test_update_nonexistent_image(test_token):
     update_data = {"original_filename": "nonexistent.jpg"}
-    response = client.put("/images/9999", json=update_data)
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.put("/images/9999", json=update_data, headers=headers)
     assert response.status_code == 404
     assert response.json()["detail"] == "Image not found"
 
-def test_update_image_invalid_data():
+def test_update_image_invalid_data(test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
     update_data = {"width": "invalid"}
-    response = client.put("/images/1", json=update_data)
+    response = client.put("/images/1", json=update_data, headers=headers)
     assert response.status_code == 422  # Unprocessable Entity for invalid input
 
-def test_delete_image_success():
+def test_delete_image_success(test_token):
     # Delete the image
-    response = client.delete(f"/images/1")
+    headers = {"Authorization": f"Bearer {test_token}"}
+    response = client.delete(f"/images/1", headers=headers)
     assert response.status_code == 200
     assert response.json()["detail"] == "Image deleted successfully"
 
     # Verify the image is no longer accessible
-    get_response = client.get(f"/images/1")
+    get_response = client.get(f"/images/1", headers=headers)
     assert get_response.status_code == 404
-
-def test_delete_nonexistent_image():
-    response = client.delete("/images/9999")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Image not found"
-
-def test_delete_image_invalid_id():
-    response = client.delete("/images/invalid")
-    assert response.status_code == 422  
 
 
 

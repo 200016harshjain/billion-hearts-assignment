@@ -22,9 +22,17 @@ class ImageUpdateRequest(BaseModel):
     class Config:
         extra = "forbid"
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
 class UserCreateRequest(BaseModel):
-    id: int
     username: str
+    password: str
+    id: int
 
     class Config:
         extra = "forbid"

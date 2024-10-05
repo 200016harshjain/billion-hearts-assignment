@@ -6,8 +6,9 @@ from app.database import Base
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=False) ## setting auto increment false for easier creation of test data
+    id = Column(Integer, primary_key=True, index=True, autoincrement=False)
     username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
 
     images = relationship("Image", back_populates="user")
 
